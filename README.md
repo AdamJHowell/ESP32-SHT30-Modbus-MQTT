@@ -2,19 +2,19 @@ This sketch uses the Arduino IDE to program an ESP32 to collect temperature and 
 
 It then publishes the data to a MQTT broker and serves the data using the Modbus TCP protocol.
 
-Several values are retrieved from privateInfo.h.
+Several values are retrieved from privateInfo.h (not included in this repo).
 
 Wi-Fi:
 ```
-   wifiSsid
-   wifiPassword
+const char *wifiSsid = "MyAP";
+const char *wifiPassword = "nunya";
 ```
 MQTT broker:
 ```
-   mqttBroker
-   mqttPort
-   mqttUsername
-   mqttPassword
+const char *mqttBroker = "AmazingBrokerName";
+const int mqttPort = 1883;
+const char *mqttUsername = "GuestHorse";
+const char *mqttPassword = "CorrectHorseBatteryStaple";
 ```
 Once this is running on the network, a FairCom Edge server can harvest its data using Modbus via this input:
 
