@@ -6,17 +6,17 @@ Several values are retrieved from privateInfo.h.
 
 Wi-Fi:
 ```
-   SSID
-   password
+   wifiSsid
+   wifiPassword
 ```
 MQTT broker:
 ```
-   address
-   port
-   username
-   password
+   mqttBroker
+   mqttPort
+   mqttUsername
+   mqttPassword
 ```
-Once this is running on the network, you can harvest its data using this input:
+Once this is running on the network, a FairCom Edge server can harvest its data using Modbus via this input:
 
 ```json
 {
