@@ -1,15 +1,21 @@
 This sketch uses the Arduino IDE to program an ESP32 to collect temperature and humidity data from a Sensiron SHT30.
+
 It then publishes the data to a MQTT broker and serves the data using the Modbus TCP protocol.
+
 Several values are retrieved from privateInfo.h.
+
 Wi-Fi:
+```
    SSID
    password
+```
 MQTT broker:
+```
    address
    port
    username
    password
-
+```
 Once this is running on the network, you can harvest its data using this input:
 
 ```json
