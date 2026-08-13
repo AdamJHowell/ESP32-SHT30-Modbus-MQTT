@@ -234,17 +234,15 @@ void wifiConnect()
             Serial.printf( "Attempting to connect to Wi-Fi SSID '%s'", wifiSsid );
             WiFi.mode( WIFI_STA );
             
+            // Hostnames should contain lowercase ASCII (a-z), numbers (0-9), and hyphens (-).
+            WiFi.setHostname( hostname );
+
             // Initiate the connection FIRST to fully wake the Wi-Fi radio.
             WiFi.begin( wifiSsid, wifiPassword );
             
             // Now that the radio is active, pull the MAC address from the efuse and assign that to the macAddress variable.
             snprintf( macAddress, 18, "%s", WiFi.macAddress().c_str() );
             
-            // Set the hostname using the newly populated MAC address.
-            // WiFi.setHostname( macAddress );
-            // Hostnames should contain lowercase ASCII (a-z), numbers (0-9), and hyphens (-).
-            WiFi.setHostname( hostname );
-
             unsigned long wifiConnectionStartTime = millis();
 
             while( WiFi.status() != WL_CONNECTED && ( millis() - wifiConnectionStartTime < wifiConnectionTimeout ) )
@@ -281,6 +279,7 @@ void configureOTA()
         Serial.println( "Start updating " + type );
     } );
 #else
+    ArduinoOTA.setHostname( hostname );
     String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
     ArduinoOTA.onStart( []() {
         String type = (ArduinoOTA.getCommand() == U_SPIFFS) ? "filesystem" : "flash";
@@ -537,7 +536,9 @@ void mqttConnect()
  */
 void setup()
 {
-    delay( 1000 );
+    // This delay gives the serial port enough time to make a connection afte a reboot.
+    // I am willing to endure a 3 second delay in order to get better setup logging.
+    delay( 3000 );
     Serial.begin( 115200 );
     if( !Serial )
         delay( 1000 );
