@@ -52,17 +52,19 @@ const unsigned int JSON_DOC_SIZE = 512;
 const char *commandTopic = "AdamsEspArmada/commands";     
 const char *topicPrefix = "AdamsEspArmada/";                  
 const char *tempCTopic = "sht30/tempC";                   
-const char *tempFTopic = "sht30/tempF";                   
-const char *humidityTopic = "sht30/humidity";             
-const char *rssiTopic = "rssi";                               
-const char *macTopic = "mac";                                     
+const char *tempFTopic = "sht30/tempF";
+const char *humidityTopic = "sht30/humidity";
+const char *hostname = "esp32-sht30-modbus";
+const char *hostnameTopic = "hostname";
+const char *rssiTopic = "rssi";
+const char *macTopic = "mac";
 const char *ipTopic = "ip";                                   
 const char *wifiCountTopic = "wifiCount";                     
 const char *wifiCoolDownTopic = "wifiCoolDownInterval"; 
 const char *mqttCountTopic = "mqttCount";                     
 const char *mqttCoolDownTopic = "mqttCoolDownInterval"; 
-const char *publishCountTopic = "publishCount";           
-const char *mqttTopic = "espWeather";                     
+const char *publishCountTopic = "publishCount";
+const char *mqttTopic = "espWeather";
 float sht30TempCArray[] = { 21.12, 21.12, 21.12 };        
 float sht30HumidityArray[] = { 21.12, 21.12, 21.12 };     
 
@@ -231,9 +233,17 @@ void wifiConnect()
 
             Serial.printf( "Attempting to connect to Wi-Fi SSID '%s'", wifiSsid );
             WiFi.mode( WIFI_STA );
-            const char *hostName = macAddress;
-            WiFi.setHostname( hostName );
+            
+            // Initiate the connection FIRST to fully wake the Wi-Fi radio.
             WiFi.begin( wifiSsid, wifiPassword );
+            
+            // Now that the radio is active, pull the MAC address from the efuse and assign that to the macAddress variable.
+            snprintf( macAddress, 18, "%s", WiFi.macAddress().c_str() );
+            
+            // Set the hostname using the newly populated MAC address.
+            // WiFi.setHostname( macAddress );
+            // Hostnames should contain lowercase ASCII (a-z), numbers (0-9), and hyphens (-).
+            WiFi.setHostname( hostname );
 
             unsigned long wifiConnectionStartTime = millis();
 
@@ -329,6 +339,7 @@ void printTelemetry()
 
     Serial.println( "Network stats:" );
     Serial.printf( "  MAC address: %s\n", macAddress );
+    Serial.printf( "  Hostname: %s\n", hostname );
     int wifiStatusCode = WiFi.status();
     char buffer[29];
     lookupWifiCode( wifiStatusCode, buffer );
@@ -365,7 +376,7 @@ void printTelemetry()
 void publishAndReport( const char *topic, const char *valueBuffer )
 {
     char topicBuffer[256] = "";
-    snprintf( topicBuffer, 256, "%s%s%s%s", topicPrefix, macAddress, "/", topic );
+    snprintf( topicBuffer, 256, "%s%s%s%s", topicPrefix, hostname, "/", topic );
     if( mqttClient.publish( topicBuffer, valueBuffer ) )
         Serial.printf( "Published '%s' to '%s'.\n", valueBuffer, topicBuffer );
     else
@@ -382,6 +393,7 @@ void publishTelemetry()
     
     publishTelemetryJsonDoc["sketch"] = __FILE__;
     publishTelemetryJsonDoc["mac"] = macAddress;
+    publishTelemetryJsonDoc["hostname"] = hostname;
     publishTelemetryJsonDoc["ip"] = ipAddress;
     publishTelemetryJsonDoc["tempC"] = averageArray( sht30TempCArray );
     publishTelemetryJsonDoc["tempF"] = cToF( averageArray( sht30TempCArray ) );
@@ -417,6 +429,9 @@ void publishTelemetry()
 
     snprintf( valueBuffer, 25, "%ld", rssi );
     publishAndReport( rssiTopic, valueBuffer );
+
+    snprintf( valueBuffer, 25, "%s", hostname );
+    publishAndReport( hostnameTopic, valueBuffer );
 
     snprintf( valueBuffer, 25, "%s", macAddress );
     publishAndReport( macTopic, valueBuffer );
@@ -529,9 +544,9 @@ void setup()
     Serial.println( "\n" );
     Serial.println( "Function setup() is beginning." );
 
-    // FIX: Initialize WiFi mode BEFORE pulling MAC Address.
-    WiFi.mode(WIFI_STA); 
-    snprintf( macAddress, 18, "%s", WiFi.macAddress().c_str() );
+    wifiConnect();
+    // WiFi.mode( WIFI_STA ); 
+    // snprintf( macAddress, 18, "%s", WiFi.macAddress().c_str() );
 
     pinMode( ONBOARD_LED, OUTPUT );
     digitalWrite( ONBOARD_LED, LED_ON );
@@ -539,16 +554,16 @@ void setup()
     setupSht30();
 
     // Initialize Modbus Server Registers
-    mb.server(502, MAX_MODBUS_CLIENTS);
-    mb.addHreg(REG_TEMP_INT, 0);
-    mb.addHreg(REG_TEMP_FRAC, 0);
-    mb.addHreg(REG_HUMIDITY, 0);
+    // mb.server(502, MAX_MODBUS_CLIENTS);
+    mb.server( 502 );
+    mb.addHreg( REG_TEMP_INT, 0 );
+    mb.addHreg( REG_TEMP_FRAC, 0 );
+    mb.addHreg( REG_HUMIDITY, 0 );
 
     // Read from the sensors twice, to populate telemetry arrays and initial Modbus states.
     readTelemetry();
     readTelemetry();
 
-    wifiConnect();
     configureOTA();
 
     Serial.println( "Function setup() has completed." );
